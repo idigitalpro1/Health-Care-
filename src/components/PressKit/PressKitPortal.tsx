@@ -23,11 +23,12 @@ const PressKitPortal: React.FC<PressKitPortalProps> = ({ isOpen, onClose }) => {
   ];
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+    <AnimatePresence initial={false}>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
         onClick={onClose}
       >
@@ -104,6 +105,7 @@ const PressKitPortal: React.FC<PressKitPortalProps> = ({ isOpen, onClose }) => {
           </div>
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 };

@@ -64,11 +64,12 @@ END:VCALENDAR`;
   if (!doctor) return null;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+    <AnimatePresence initial={false}>
+      {doctor && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
         onClick={onClose}
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
       >
@@ -206,7 +207,7 @@ END:VCALENDAR`;
             </div>
           </div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 };

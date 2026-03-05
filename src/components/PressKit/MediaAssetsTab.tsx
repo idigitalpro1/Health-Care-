@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Upload, Trash2, Image as ImageIcon, FileText, Download, Eye, AlertCircle, ArrowUpDown, Volume2, Loader2, X, Save, Tag, Search, Plus } from 'lucide-react';
+import { Upload, Trash2, Image as ImageIcon, FileText, Download, Eye, AlertCircle, ArrowUpDown, Volume2, Loader2, X, Save, Tag, Search, Plus, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -67,6 +67,14 @@ const MediaAssetsTab: React.FC = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // AI Generation State
+  const [isGeneratingModalOpen, setIsGeneratingModalOpen] = useState(false);
+  const [genSubject, setGenSubject] = useState('');
+  const [genStyle, setGenStyle] = useState('realistic');
+  const [genKeywords, setGenKeywords] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
 
   // Derived state for all unique tags across assets
   const allUniqueTags = useMemo(() => {
@@ -230,6 +238,67 @@ const MediaAssetsTab: React.FC = () => {
     setShowSuggestions(false);
   };
 
+  const handleGenerateImage = async () => {
+    if (!genSubject.trim()) {
+      setGenError('Please enter a subject.');
+      return;
+    }
+    
+    setIsGenerating(true);
+    setGenError(null);
+    
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const prompt = `A ${genStyle} image of ${genSubject}. ${genKeywords ? `Keywords: ${genKeywords}` : ''}`;
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+          parts: [
+            { text: prompt }
+          ]
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: "1:1",
+          }
+        }
+      });
+      
+      let imageUrl = '';
+      for (const part of response.candidates?.[0]?.content?.parts || []) {
+        if (part.inlineData) {
+          imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+          break;
+        }
+      }
+      
+      if (imageUrl) {
+        const newAsset: Asset = {
+          id: Date.now().toString(),
+          name: `AI Generated: ${genSubject.slice(0, 20)}...`,
+          type: 'image',
+          url: imageUrl,
+          size: 'AI Generated',
+          date: new Date().toISOString().split('T')[0],
+          description: `AI generated image. Prompt: ${prompt}`,
+          tags: ['ai-generated', genStyle, ...genKeywords.split(',').map(k => k.trim()).filter(Boolean)],
+        };
+        setAssets([newAsset, ...assets]);
+        setIsGeneratingModalOpen(false);
+        setGenSubject('');
+        setGenKeywords('');
+      } else {
+        setGenError('Failed to generate image. No image data returned.');
+      }
+    } catch (err: any) {
+      console.error("Image Generation Error:", err);
+      setGenError(err.message || 'Failed to generate image.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // Close suggestions when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -271,13 +340,22 @@ const MediaAssetsTab: React.FC = () => {
           <p className="text-gray-500">Manage your public-facing media files for press kits and articles.</p>
         </div>
         <div className="flex flex-col items-end gap-2 w-full md:w-auto">
-          <button 
-            onClick={triggerUpload}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-sm w-full md:w-auto justify-center"
-          >
-            <Upload size={18} />
-            Upload New Asset
-          </button>
+          <div className="flex gap-2 w-full md:w-auto">
+            <button 
+              onClick={() => setIsGeneratingModalOpen(true)}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors shadow-sm w-full md:w-auto justify-center"
+            >
+              <Sparkles size={18} />
+              Generate AI Image
+            </button>
+            <button 
+              onClick={triggerUpload}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-sm w-full md:w-auto justify-center"
+            >
+              <Upload size={18} />
+              Upload New Asset
+            </button>
+          </div>
           {error && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
@@ -316,7 +394,7 @@ const MediaAssetsTab: React.FC = () => {
             />
             
             {/* Search Suggestions Dropdown */}
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
               {showSuggestions && searchSuggestions.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 5 }}
@@ -370,7 +448,7 @@ const MediaAssetsTab: React.FC = () => {
 
       {/* Asset Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="popLayout" initial={false}>
           {filteredAndSortedAssets.map((asset) => (
             <motion.div
               key={asset.id}
@@ -468,7 +546,7 @@ const MediaAssetsTab: React.FC = () => {
       </div>
 
       {/* Large Hover Preview - Rendered via Portal to escape modal clipping */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         {hoveredAsset && !selectedAsset && createPortal(
           <motion.div
             key={hoveredAsset.id}
@@ -523,7 +601,7 @@ const MediaAssetsTab: React.FC = () => {
       </AnimatePresence>
 
       {/* Detail Modal - Rendered via Portal */}
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {selectedAsset && createPortal(
           <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedAsset(null)}>
             <motion.div
@@ -657,6 +735,114 @@ const MediaAssetsTab: React.FC = () => {
                 >
                   <Save size={16} />
                   Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </div>,
+          document.body
+        )}
+      </AnimatePresence>
+
+      {/* AI Generate Modal */}
+      <AnimatePresence initial={false}>
+        {isGeneratingModalOpen && createPortal(
+          <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => !isGenerating && setIsGeneratingModalOpen(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-purple-50">
+                <div className="flex items-center gap-2 text-purple-700">
+                  <Sparkles size={20} />
+                  <h3 className="text-xl font-bold">Generate AI Image</h3>
+                </div>
+                <button 
+                  onClick={() => !isGenerating && setIsGeneratingModalOpen(false)}
+                  disabled={isGenerating}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors disabled:opacity-50"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                {genError && (
+                  <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-start gap-2">
+                    <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                    <p>{genError}</p>
+                  </div>
+                )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    value={genSubject}
+                    onChange={(e) => setGenSubject(e.target.value)}
+                    placeholder="e.g., A modern hospital building, a doctor smiling"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    disabled={isGenerating}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Style</label>
+                  <select
+                    value={genStyle}
+                    onChange={(e) => setGenStyle(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    disabled={isGenerating}
+                  >
+                    <option value="realistic">Realistic / Photographic</option>
+                    <option value="illustration">Illustration</option>
+                    <option value="3d render">3D Render</option>
+                    <option value="watercolor">Watercolor</option>
+                    <option value="minimalist">Minimalist</option>
+                    <option value="corporate">Corporate / Professional</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Keywords (Optional)</label>
+                  <input
+                    type="text"
+                    value={genKeywords}
+                    onChange={(e) => setGenKeywords(e.target.value)}
+                    placeholder="e.g., bright, sunny, clean, blue tones"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    disabled={isGenerating}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Comma separated keywords to refine the image.</p>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsGeneratingModalOpen(false)}
+                  disabled={isGenerating}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleGenerateImage}
+                  disabled={isGenerating || !genSubject.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} />
+                      Generate
+                    </>
+                  )}
                 </button>
               </div>
             </motion.div>

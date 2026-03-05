@@ -1,5 +1,5 @@
 {
-  "name": "Remix: South Denver Health Map",
-  "description": "Interactive body map for matching patients with specialists in South Denver.",
-  "requestFramePermissions": []
+  "name": "The Villager: South Denver Health Intelligence",
+  "description": "Interactive anatomy-based specialist matching and AI health advocacy for the South Denver community.",
+  "requestFramePermissions": ["microphone"]
 }
