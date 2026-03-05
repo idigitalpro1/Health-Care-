@@ -1,0 +1,5 @@
+{
+  "name": "Remix: South Denver Health Map",
+  "description": "Interactive body map for matching patients with specialists in South Denver.",
+  "requestFramePermissions": []
+}
