@@ -13,9 +13,16 @@ import InteractiveAnatomyModule from './components/InteractiveAnatomyModule';
 import WidgetRail from './components/WidgetRail';
 import InfiniteFeed from './components/InfiniteFeed';
 import Footer from './components/Footer';
+import StripePurchase from './components/StripePurchase';
+import PaymentSuccess from './components/PaymentSuccess';
 
 function App() {
   const [isPressKitOpen, setIsPressKitOpen] = useState(false);
+  const isSuccessPage = typeof window !== 'undefined' && window.location.pathname === '/success';
+
+  if (isSuccessPage) {
+    return <PaymentSuccess />;
+  }
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col font-sans overflow-x-hidden relative">
@@ -55,6 +62,7 @@ function App() {
       <Header onOpenPressKit={() => setIsPressKitOpen(true)} />
       
       <main className="flex-1 max-w-[1920px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 mb-12">
+        <StripePurchase />
         
         {/* Featured Stories Slider */}
         <FeaturedStories />
