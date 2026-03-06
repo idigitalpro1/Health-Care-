@@ -18,7 +18,6 @@ View your app in AI Studio: https://ai.studio/apps/3ad2b7dc-3eaa-4b30-b818-895e0
    `cp .env.example .env.local`
 3. Fill required keys in `.env.local` (keep this file untracked):
    - `GEMINI_API_KEY`
-   - `VITE_STRIPE_PUBLISHABLE_KEY`
    - `STRIPE_SECRET_KEY`
 4. Start Stripe backend API (terminal 1):
    `npm run dev:api`
@@ -66,3 +65,20 @@ Checkout success returns to:
 - `/success?session_id=...`
 
 The success screen verifies session payment status and unlocks the relevant feature locally.
+
+## Cloud Run deployment
+
+This repo can run as a single Cloud Run service that serves the built Vite frontend and the API together.
+
+1. Set the GCP project:
+   `gcloud config set project villager-media-group`
+2. Deploy:
+   `gcloud run deploy health-care-app --source . --region us-west1 --allow-unauthenticated`
+3. Set runtime env vars in Cloud Run:
+   - `GEMINI_API_KEY`
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_PRICE_DOCTOR_LISTING`
+   - `STRIPE_PRICE_PRESS_KIT`
+   - `APP_URL`
+
+The service entrypoint is `server.mjs`, which serves both `/api/*` and the static frontend.

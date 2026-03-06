@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mic, X, MessageSquare, Send, Loader2, Heart, ShieldCheck, Info } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 
 const SusanWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
@@ -29,25 +28,17 @@ const SusanWidget: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [
-          { role: 'user', parts: [{ text: `You are Susan Sweeney, a dedicated healthcare advocate for the South Denver community (Highlands Ranch, Greenwood Village, Cherry Hills). 
-          Your goal is to help patients find the right specialists, understand local healthcare options, and feel empowered. 
-          Be compassionate, professional, and knowledgeable about Colorado healthcare. 
-          If asked about specific doctors, refer to the "South Denver Health Map" (the app the user is currently using).
-          Keep responses concise and helpful. 
-          
-          User says: ${userMessage}` }] }
-        ],
-        config: {
-          temperature: 0.7,
-          maxOutputTokens: 500,
-        }
+      const response = await fetch('/api/v1/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage }),
       });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Unable to contact Susan right now.');
+      }
 
-      const aiText = response.text || "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.";
+      const aiText = payload.text || "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.";
       setMessages(prev => [...prev, { role: 'model', text: aiText }]);
     } catch (error) {
       console.error("Gemini Error:", error);

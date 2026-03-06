@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+import React, { useEffect, useState } from 'react';
 
 type ProductType = 'doctor_listing' | 'press_kit';
 
@@ -36,12 +35,6 @@ export default function StripePurchase() {
   const [loading, setLoading] = useState<ProductType | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const stripePromise = useMemo(() => {
-    const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-    if (!key) return null;
-    return loadStripe(key);
-  }, []);
-
   useEffect(() => {
     setLocalUnlockState(getUnlockState());
   }, []);
@@ -62,19 +55,12 @@ export default function StripePurchase() {
         throw new Error(payload?.error || 'Unable to create checkout session.');
       }
 
-      if (!stripePromise) {
-        if (payload.url) {
-          window.location.href = payload.url;
-          return;
-        }
-        throw new Error('Missing VITE_STRIPE_PUBLISHABLE_KEY.');
+      if (payload.url) {
+        window.location.href = payload.url;
+        return;
       }
 
-      const stripe = await stripePromise;
-      if (!stripe) throw new Error('Stripe initialization failed.');
-
-      const result = await stripe.redirectToCheckout({ sessionId: payload.id });
-      if (result.error) throw new Error(result.error.message || 'Stripe checkout failed.');
+      throw new Error('Stripe checkout URL was not returned.');
     } catch (checkoutError) {
       setError(checkoutError instanceof Error ? checkoutError.message : 'Checkout failed.');
       setLoading(null);

@@ -2,7 +2,6 @@ import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Upload, Trash2, Image as ImageIcon, FileText, Download, Eye, AlertCircle, ArrowUpDown, Volume2, Loader2, X, Save, Tag, Search, Plus, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GoogleGenAI } from "@google/genai";
 
 interface Asset {
   id: string;
@@ -168,23 +167,19 @@ const MediaAssetsTab: React.FC = () => {
     setPlayingId(asset.id);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: `Media Asset: ${asset.name}. Type: ${asset.type}. Size: ${asset.size}. Tags: ${asset.tags?.join(', ') || 'None'}. Description: ${asset.description || 'No description provided.'}` }] }],
-        config: {
-          responseModalities: ["AUDIO"],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Kore' },
-            },
-          },
-        },
+      const response = await fetch('/api/v1/ai/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ asset }),
       });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Unable to generate audio.');
+      }
 
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      const base64Audio = payload.audioData;
       if (base64Audio) {
-        const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
+        const audio = new Audio(`data:${payload.mimeType || 'audio/wav'};base64,${base64Audio}`);
         audio.onended = () => setPlayingId(null);
         await audio.play();
       } else {
@@ -248,30 +243,22 @@ const MediaAssetsTab: React.FC = () => {
     setGenError(null);
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `A ${genStyle} image of ${genSubject}. ${genKeywords ? `Keywords: ${genKeywords}` : ''}`;
-      
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [
-            { text: prompt }
-          ]
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: "1:1",
-          }
-        }
+      const response = await fetch('/api/v1/ai/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: genSubject,
+          style: genStyle,
+          keywords: genKeywords,
+        }),
       });
-      
-      let imageUrl = '';
-      for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-          imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-          break;
-        }
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to generate image.');
       }
+      
+      const imageUrl = payload.dataUrl || '';
+      const prompt = payload.prompt || `A ${genStyle} image of ${genSubject}. ${genKeywords ? `Keywords: ${genKeywords}` : ''}`;
       
       if (imageUrl) {
         const newAsset: Asset = {
