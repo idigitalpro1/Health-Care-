@@ -39,8 +39,8 @@ Script file: `scripts/register-stripe-domain.js`
 Domains registered:
 - `registercall.com`
 - `conews.press`
-- `healthiq.registercall.com`
-- optional: `thedvillagerhealth.conews.press` (or override with `STRIPE_OPTIONAL_DOMAIN`)
+- `healthhq.conews.press`
+- optional: `healthiq.registercall.com` (or override with `STRIPE_OPTIONAL_DOMAIN`)
 
 ### 2) Create products/prices
 

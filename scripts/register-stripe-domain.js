@@ -16,9 +16,9 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2025-02-24.acacia' }
 const domains = [
   { name: 'registercall.com', required: true },
   { name: 'conews.press', required: true },
-  { name: 'healthiq.registercall.com', required: true },
+  { name: 'healthhq.conews.press', required: true },
   {
-    name: process.env.STRIPE_OPTIONAL_DOMAIN || 'thedvillagerhealth.conews.press',
+    name: process.env.STRIPE_OPTIONAL_DOMAIN || 'healthiq.registercall.com',
     required: false,
   },
 ];
